@@ -1,6 +1,7 @@
 const fs = require ('fs');
 const http = require('http');
 const url = require('url');
+const replaceTemplate = require('./modules/replaceTemplate');
 
 
 /////////////////////////////////
@@ -46,25 +47,30 @@ const tempProduct = fs.readFileSync(
   'utf-8'
 );
 
-function replaceTemplate(temp, product) {   //temp is the template and product is the object  
-  let output = temp.replace(/{%PRODUCTNAME%}/g, product.productName);
-  output = output.replace(/{%IMAGE%}/g, product.image);
-  output = output.replace(/{%PRICE%}/g, product.price);
-  output = output.replace(/{%FROM%}/g, product.from);
-  output = output.replace(/{%NUTRIENTS%}/g, product.nutrients);
-  output = output.replace(/{%QUANTITY%}/g, product.quantity);
-  output = output.replace(/{%DESCRIPTION%}/g, product.description);
-  output = output.replace(/{%ID%}/g, product.id);
+// function replaceTemplate(temp, product) {   //temp is the template and product is the object  
+//   let output = temp.replace(/{%PRODUCTNAME%}/g, product.productName);
+//   output = output.replace(/{%IMAGE%}/g, product.image);
+//   output = output.replace(/{%PRICE%}/g, product.price);
+//   output = output.replace(/{%FROM%}/g, product.from);
+//   output = output.replace(/{%NUTRIENTS%}/g, product.nutrients);
+//   output = output.replace(/{%QUANTITY%}/g, product.quantity);
+//   output = output.replace(/{%DESCRIPTION%}/g, product.description);
+//   output = output.replace(/{%ID%}/g, product.id);
   
-  if(!product.organic) output = output.replace(/{%NOT_ORGANIC%}/g, 'not-organic');
-  return output;
-}
+//   if(!product.organic) output = output.replace(/{%NOT_ORGANIC%}/g, 'not-organic');
+//   return output;
+// }
 
 const data = fs.readFileSync(`${__dirname}/dev-data/data.json`, 'utf-8');
 const dataObj = JSON.parse(data);    //dataObj holds all of the products details in the form of an array of objects
 
 const server = http.createServer((req, res) => {
-    const pathname = req.url;
+    // console.log(req.url);
+    // console.log(url.parse(req.url, true));  //url.parse() method returns an object containing the url's individual components and we mention true to get the query string as an object
+    // const pathname = req.url;
+
+    const { query, pathname } = url.parse(req.url, true);  //destructuring the object returned by url.parse() method. pathname is only the path without the query string like ?id=0
+    
     if (pathname === '/' || pathname === '/overview') {
         res.writeHead(200, {'Content-type': 'text/html'});
         const cardsHtml = dataObj.map(el => replaceTemplate(tempCard, el)).join('');
@@ -75,7 +81,14 @@ const server = http.createServer((req, res) => {
     }
 
     else if (pathname === '/product') {
-        res.end('This is the PRODUCT');}
+      res.writeHead(200, {
+        'Content-type': 'text/html'
+      });
+      const product = dataObj[query.id];
+      const output = replaceTemplate(tempProduct, product);
+      res.end(output);
+    }
+
     else if (pathname === '/api') {
         res.writeHead(200, {'Content-type': 'application/json'});
         res.end(data);
